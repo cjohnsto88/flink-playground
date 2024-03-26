@@ -58,14 +58,17 @@ class JobTest {
                     .build()
     );
 
+    public static final Slf4jLogConsumer LOG_CONSUMER = new Slf4jLogConsumer(LOGGER);
     @Container
     static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.4"))
-            .withLogConsumer(new Slf4jLogConsumer(LOGGER));
+            .withLogConsumer(LOG_CONSUMER);
 
     private ExecutorService jobSubmitter;
 
     @BeforeAll
     static void beforeAll() {
+        kafka.followOutput(LOG_CONSUMER);
+
         Map<String, Object> config = Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
 
         try (AdminClient adminClient = AdminClient.create(config)) {
