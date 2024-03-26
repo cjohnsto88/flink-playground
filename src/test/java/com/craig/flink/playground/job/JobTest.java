@@ -129,6 +129,8 @@ class JobTest {
                        records.forEach(receivedRecords::add);
 
                        assertThat(receivedRecords).allSatisfy(record -> {
+                           LOGGER.info("Record: {}", record);
+
                            JSONAssert.assertEquals(expectedJson, record.value(), JSONCompareMode.STRICT);
                        });
                    });
