@@ -4,7 +4,7 @@
 
 ### Start the Kafka Container
 ```shell
-docker compose up -d
+docker-compose up -d
 ```
 
 ### Enter Kafka Container
@@ -26,5 +26,5 @@ kafka-console-consumer --topic first-flink-uppercase --bootstrap-server kafka:90
 
 ### Stop the Kafka Container
 ```shell
-docker compose down
+docker-compose down
 ```
