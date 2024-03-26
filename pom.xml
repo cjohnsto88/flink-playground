@@ -318,6 +318,15 @@ under the License.
 				<plugin>
 					<artifactId>maven-surefire-plugin</artifactId>
 					<version>3.2.5</version>
+					<configuration>
+						<systemProperties>
+							<!-- getting around Flink putting a log4j2-test.properties file on the claspath... -->
+							<property>
+								<name>log4j2.configurationFile</name>
+								<value>log4J2.xml</value>
+							</property>
+						</systemProperties>
+					</configuration>
 				</plugin>
 
 				<plugin>
