@@ -38,7 +38,7 @@ under the License.
 		<testcontainers.version>1.19.7</testcontainers.version>
 		<junit.version>5.10.2</junit.version>
 		<assertj.version>3.25.3</assertj.version>
-		<spring-kafka.version>2.9.13</spring-kafka.version> <!-- latest available that works with Java versions < 17 -->
+		<spring-kafka.version>3.1.3</spring-kafka.version> <!-- latest available that works with Java versions < 17 -->
 	</properties>
 
 	<scm>
@@ -67,6 +67,14 @@ under the License.
 				<groupId>org.junit</groupId>
 				<artifactId>junit-bom</artifactId>
 				<version>${junit.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.springframework.kafka</groupId>
+				<artifactId>spring-kafka-bom</artifactId>
+				<version>${spring-kafka.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
