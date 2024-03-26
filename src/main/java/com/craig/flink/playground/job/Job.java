@@ -41,20 +41,7 @@ public class Job {
 
         DataStream<String> upperCaseStream = firstFlinkData.map(input -> input.toUpperCase(Locale.ROOT));
 
-//        upperCaseStream.print();
-
         upperCaseStream.sinkTo(kafkaSink);
-
-//		DataStreamSource<String> elements = streamEnv.fromElements("one", "two", "three");
-//
-//		Table inputTable = tableEnv.fromDataStream(elements);
-//
-//		tableEnv.createTemporaryView("InputTable", inputTable);
-//		Table resultTable = tableEnv.sqlQuery("SELECT UPPER(f0) FROM InputTable");
-//
-//		DataStream<Row> resultStream = tableEnv.toDataStream(resultTable);
-//
-//		resultStream.print();
         return streamEnv.execute();
     }
 }
