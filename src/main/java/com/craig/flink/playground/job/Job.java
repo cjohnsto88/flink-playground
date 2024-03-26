@@ -1,5 +1,6 @@
 package com.craig.flink.playground.job;
 
+import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
@@ -14,7 +15,7 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import java.util.Locale;
 
 public class Job {
-    public void execute(String bootstrapServers) throws Exception {
+    public JobSubmissionResult execute(String bootstrapServers) throws Exception {
         StreamExecutionEnvironment streamEnv = StreamExecutionEnvironment.getExecutionEnvironment();
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(streamEnv);
 
@@ -54,6 +55,6 @@ public class Job {
 //		DataStream<Row> resultStream = tableEnv.toDataStream(resultTable);
 //
 //		resultStream.print();
-        streamEnv.execute();
+        return streamEnv.execute();
     }
 }
