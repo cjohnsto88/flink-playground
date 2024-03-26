@@ -38,8 +38,8 @@ under the License.
 	</properties>
 
 	<scm>
-		<connection>scm:git:git@github.com:cjohnsto88/flink-playground.git</connection>
-		<developerConnection>scm:git:git@github.com:cjohnsto88/flink-playground.git</developerConnection>
+		<connection>scm:git:git@github.com/cjohnsto88/flink-playground.git</connection>
+		<developerConnection>scm:git:git@github.com/cjohnsto88/flink-playground.git</developerConnection>
 		<url>https://github.com/cjohnsto88/flink-playground</url>
 	</scm>
 
