@@ -1,7 +1,5 @@
 package com.craig.flink.playground.job;
 
-import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
-import org.apache.flink.test.junit5.MiniClusterExtension;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -18,7 +16,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
@@ -48,14 +45,6 @@ class JobTest {
     public static final String INPUT_TOPIC = "first-flink-data";
     public static final String OUTPUT_TOPIC = "first-flink-uppercase";
     public static final Slf4jLogConsumer LOG_CONSUMER = new Slf4jLogConsumer(LOGGER);
-
-    @RegisterExtension
-    static MiniClusterExtension miniClusterExtension = new MiniClusterExtension(
-            new MiniClusterResourceConfiguration.Builder()
-                    .setNumberTaskManagers(1)
-                    .setNumberSlotsPerTaskManager(30)
-                    .build()
-    );
 
     @Container
     static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.4"))
