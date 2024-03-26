@@ -1,27 +1,52 @@
 package com.craig.flink.playground.job;
 
-import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
+import org.apache.flink.connector.kafka.sink.KafkaSink;
+import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.test.junit5.MiniClusterExtension;
-import org.junit.jupiter.api.BeforeEach;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.springframework.kafka.test.assertj.KafkaConditions.value;
 
 @Testcontainers
 @ExtendWith(MiniClusterExtension.class)
@@ -29,59 +54,93 @@ class JobTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Job.class);
 
+    public static final String INPUT_TOPIC = "first-flink-data";
+    public static final String OUTPUT_TOPIC = "first-flink-uppercase";
 
     @RegisterExtension
     static MiniClusterExtension miniClusterExtension = new MiniClusterExtension(
             new MiniClusterResourceConfiguration.Builder()
                     .setNumberTaskManagers(1)
-                    .setNumberSlotsPerTaskManager(2)
+                    .setNumberSlotsPerTaskManager(30)
                     .build()
     );
 
     @Container
-    KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:6.2.1"))
+    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.4"))
             .withLogConsumer(new Slf4jLogConsumer(LOGGER));
 
-    @BeforeEach
-    void setUp() {
-        LOGGER.info("Hello");
+    @BeforeAll
+    static void beforeAll() {
+        Map<String, Object> config = Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+
+        try (AdminClient adminClient = AdminClient.create(config)) {
+            adminClient.createTopics(List.of(
+                    new NewTopic(INPUT_TOPIC, 4, (short) 1),
+                    new NewTopic(OUTPUT_TOPIC, 4, (short) 1)
+            ));
+        }
     }
 
     @Test
-    void containerHasBootstrapServersValue() throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    void containerHasBootstrapServersValue() {
+        Map<String, Object> producerProperties = KafkaTestUtils.producerProps(kafka.getBootstrapServers());
 
-        // configure your test environment
-        env.setParallelism(2);
+        try (Producer<String, String> producer = new KafkaProducer<>(producerProperties, new StringSerializer(), new StringSerializer())) {
+            producer.send(new ProducerRecord<>(INPUT_TOPIC, "key", "Hello 1"));
+            producer.send(new ProducerRecord<>(INPUT_TOPIC, "key", "HeLLo 2"));
+            producer.send(new ProducerRecord<>(INPUT_TOPIC, "key", "HELLO 3"));
+        }
 
-        // values are collected in a static variable
-        CollectSink.values.clear();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
 
-        // create a stream of custom elements and apply transformations
-        env.fromElements(1L, 21L, 22L)
-           .map((MapFunction<Long, Long>) value -> value + 1)
-           .addSink(new CollectSink());
+        executor.submit(() -> {
+            StreamExecutionEnvironment streamEnv = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        // execute
-        env.execute();
+            KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
+                                                         .setBootstrapServers(kafka.getBootstrapServers())
+                                                         .setTopics(INPUT_TOPIC)
+                                                         .setValueOnlyDeserializer(new SimpleStringSchema())
+                                                         .setGroupId("first-flink-group")
+                                                         .setStartingOffsets(OffsetsInitializer.earliest())
+                                                         .build();
 
-        // verify your results
-        assertThat(CollectSink.values).containsExactly(2L, 22L, 23L);
+            KafkaSink<String> kafkaSink = KafkaSink.<String>builder()
+                                                   .setBootstrapServers(kafka.getBootstrapServers())
+                                                   .setRecordSerializer(KafkaRecordSerializationSchema.builder()
+                                                                                                      .setTopic(OUTPUT_TOPIC)
+                                                                                                      .setValueSerializationSchema(new SimpleStringSchema())
+                                                                                                      .build()
+                                                   )
+                                                   .build();
 
-        String bootstrapServers = kafka.getBootstrapServers();
+            DataStreamSource<String> firstFlinkData = streamEnv.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "firstFlinkData");
 
-        assertThat(bootstrapServers).isNotEmpty();
-    }
+            DataStream<String> upperCaseStream = firstFlinkData.map(input -> input.toUpperCase(Locale.ROOT));
 
+            upperCaseStream.sinkTo(kafkaSink);
 
-    private static class CollectSink implements SinkFunction<Long> {
+            upperCaseStream.print();
 
-        // must be static
-        public static final List<Long> values = Collections.synchronizedList(new ArrayList<>());
+            return streamEnv.execute();
+        });
 
-        @Override
-        public void invoke(Long value, SinkFunction.Context context) throws Exception {
-            values.add(value);
+        Map<String, Object> consumerProperties = KafkaTestUtils.consumerProps(kafka.getBootstrapServers(), "test-group", "true");
+
+        List<ConsumerRecord<String, String>> receivedRecords = new ArrayList<>();
+        try (Consumer<String, String> consumer = new KafkaConsumer<>(consumerProperties, new StringDeserializer(), new StringDeserializer())) {
+            consumer.subscribe(List.of(OUTPUT_TOPIC));
+
+            await().atMost(Duration.ofSeconds(20L))
+                   .untilAsserted(() -> {
+                       ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer);
+                       records.forEach(receivedRecords::add);
+
+                       assertThat(receivedRecords).satisfiesExactlyInAnyOrder(
+                               record -> assertThat(record).has(value("HELLO 1")),
+                               record -> assertThat(record).has(value("HELLO 2")),
+                               record -> assertThat(record).has(value("HELLO 3"))
+                       );
+                   });
         }
     }
 }

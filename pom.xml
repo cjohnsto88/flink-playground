@@ -38,6 +38,7 @@ under the License.
 		<testcontainers.version>1.19.7</testcontainers.version>
 		<junit.version>5.10.2</junit.version>
 		<assertj.version>3.25.3</assertj.version>
+		<spring-kafka.version>2.9.13</spring-kafka.version> <!-- latest available that works with Java versions < 17 -->
 	</properties>
 
 	<scm>
@@ -178,6 +179,20 @@ under the License.
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>kafka</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka-test</artifactId>
+			<version>${spring-kafka.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
+			<version>4.2.1</version>
 			<scope>test</scope>
 		</dependency>
 
