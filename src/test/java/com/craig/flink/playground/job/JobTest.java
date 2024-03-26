@@ -47,6 +47,7 @@ class JobTest {
 
     public static final String INPUT_TOPIC = "first-flink-data";
     public static final String OUTPUT_TOPIC = "first-flink-uppercase";
+    public static final Slf4jLogConsumer LOG_CONSUMER = new Slf4jLogConsumer(LOGGER);
 
     @RegisterExtension
     static MiniClusterExtension miniClusterExtension = new MiniClusterExtension(
@@ -56,7 +57,6 @@ class JobTest {
                     .build()
     );
 
-    public static final Slf4jLogConsumer LOG_CONSUMER = new Slf4jLogConsumer(LOGGER);
     @Container
     static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.4"))
             .withLogConsumer(LOG_CONSUMER);
