@@ -125,14 +125,20 @@ class JobTest {
 
             await().atMost(Duration.ofSeconds(20L))
                    .untilAsserted(() -> {
-                       ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer);
-                       records.forEach(receivedRecords::add);
+                       try {
+                           ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer);
+                           records.forEach(receivedRecords::add);
 
-                       assertThat(receivedRecords).allSatisfy(record -> {
-                           LOGGER.info("Record: {}", record);
+                           assertThat(receivedRecords).allSatisfy(record -> {
+                               LOGGER.info("Record: {}", record);
 
-                           JSONAssert.assertEquals(expectedJson, record.value(), JSONCompareMode.STRICT);
-                       });
+                               JSONAssert.assertEquals(expectedJson, record.value(), JSONCompareMode.STRICT);
+                           });
+                       } catch (Exception e) {
+                           LOGGER.error("Failure when asserting", e);
+
+                           throw e;
+                       }
                    });
         }
     }
