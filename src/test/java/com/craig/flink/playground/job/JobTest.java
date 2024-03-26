@@ -20,6 +20,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
@@ -38,7 +40,6 @@ import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.springframework.kafka.test.assertj.KafkaConditions.value;
 
 @Testcontainers
 @ExtendWith(MiniClusterExtension.class)
@@ -90,9 +91,15 @@ class JobTest {
         Map<String, Object> producerProperties = KafkaTestUtils.producerProps(kafka.getBootstrapServers());
 
         try (Producer<String, String> producer = new KafkaProducer<>(producerProperties, new StringSerializer(), new StringSerializer())) {
-            producer.send(new ProducerRecord<>(INPUT_TOPIC, "key", "Hello 1"));
-            producer.send(new ProducerRecord<>(INPUT_TOPIC, "key", "HeLLo 2"));
-            producer.send(new ProducerRecord<>(INPUT_TOPIC, "key", "HELLO 3"));
+            // language=json
+            String json = """
+                    {
+                      "firstName": "Craig",
+                      "lastName": "Johnston"
+                    }
+                    """;
+
+            producer.send(new ProducerRecord<>(INPUT_TOPIC, "{\"key\": \"ONE\"}", json));
         }
 
         jobSubmitter.submit(() -> {
@@ -103,6 +110,14 @@ class JobTest {
 
         Map<String, Object> consumerProperties = KafkaTestUtils.consumerProps(kafka.getBootstrapServers(), "test-group", "true");
 
+        // language=json
+        String expectedJson = """
+                {
+                  "firstName": "CRAIG",
+                  "lastName": "JOHNSTON"
+                }
+                """;
+
         List<ConsumerRecord<String, String>> receivedRecords = new ArrayList<>();
         try (Consumer<String, String> consumer = new KafkaConsumer<>(consumerProperties, new StringDeserializer(), new StringDeserializer())) {
             consumer.subscribe(List.of(OUTPUT_TOPIC));
@@ -112,11 +127,9 @@ class JobTest {
                        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer);
                        records.forEach(receivedRecords::add);
 
-                       assertThat(receivedRecords).satisfiesExactlyInAnyOrder(
-                               record -> assertThat(record).has(value("HELLO 1")),
-                               record -> assertThat(record).has(value("HELLO 2")),
-                               record -> assertThat(record).has(value("HELLO 3"))
-                       );
+                       assertThat(receivedRecords).allSatisfy(record -> {
+                           JSONAssert.assertEquals(expectedJson, record.value(), JSONCompareMode.STRICT);
+                       });
                    });
         }
     }

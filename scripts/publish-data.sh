@@ -2,4 +2,4 @@
 
 echo -e 'Publishing data'
 
-docker exec flink-kafka /bin/sh -c "echo \"from script\" | kafka-console-producer --topic first-flink-data --bootstrap-server kafka:29092"
+docker exec flink-kafka /bin/sh -c "echo \"{\"firstName\": \"Craig\", \"lastName\": \"Johnston\"}\" | kafka-console-producer --topic first-flink-data --bootstrap-server kafka:29092"

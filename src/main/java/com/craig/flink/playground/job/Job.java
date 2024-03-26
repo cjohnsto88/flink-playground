@@ -1,47 +1,60 @@
 package com.craig.flink.playground.job;
 
 import org.apache.flink.api.common.JobSubmissionResult;
-import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
-import org.apache.flink.connector.kafka.sink.KafkaSink;
-import org.apache.flink.connector.kafka.source.KafkaSource;
-import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
-import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-
-import java.util.Locale;
 
 public class Job {
     public JobSubmissionResult execute(String bootstrapServers) throws Exception {
         StreamExecutionEnvironment streamEnv = StreamExecutionEnvironment.getExecutionEnvironment();
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(streamEnv);
 
-        KafkaSource<String> kafkaSource = KafkaSource.<String>builder()
-                                                     .setBootstrapServers(bootstrapServers)
-                                                     .setTopics("first-flink-data")
-                                                     .setValueOnlyDeserializer(new SimpleStringSchema())
-                                                     .setGroupId("first-flink-group")
-                                                     .setStartingOffsets(OffsetsInitializer.earliest())
-                                                     .build();
+        String createInputTableSql = """
+                CREATE TABLE KafkaInput (
+                  `firstName` VARCHAR,
+                  `lastName` VARCHAR
+                ) WITH (
+                  'connector' = 'kafka',
+                  'topic' = 'first-flink-data',
+                  'properties.bootstrap.servers' = '%s',
+                  'properties.group.id' = 'first-flink-group',
+                  'scan.startup.mode' = 'earliest-offset',
+                  'format' = 'json'
+                )
+                """.formatted(bootstrapServers);
 
-        KafkaSink<String> kafkaSink = KafkaSink.<String>builder()
-                                               .setBootstrapServers(bootstrapServers)
-                                               .setRecordSerializer(KafkaRecordSerializationSchema.builder()
-                                                                                                  .setTopic("first-flink-uppercase")
-                                                                                                  .setValueSerializationSchema(new SimpleStringSchema())
-                                                                                                  .build()
-                                               )
-//                                               .setDeliveryGuarantee(DeliveryGuarantee.EXACTLY_ONCE)
-                                               .build();
+        tableEnv.executeSql(createInputTableSql);
 
-        DataStreamSource<String> firstFlinkData = streamEnv.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "firstFlinkData");
+        tableEnv.executeSql("""
+                CREATE TABLE KafkaOutput (
+                  `firstName` VARCHAR,
+                  `lastName` VARCHAR
+                ) WITH (
+                  'connector' = 'kafka',
+                  'topic' = 'first-flink-uppercase',
+                  'properties.bootstrap.servers' = '%s',
+                  'value.format' = 'json'
+                )
+                """.formatted(bootstrapServers));
 
-        DataStream<String> upperCaseStream = firstFlinkData.map(input -> input.toUpperCase(Locale.ROOT));
+        tableEnv.executeSql("""
+                CREATE TABLE PrintOutput (
+                  `firstName` VARCHAR,
+                  `lastName` VARCHAR
+                ) WITH (
+                  'connector' = 'print'
+                )
+                """);
 
-        upperCaseStream.sinkTo(kafkaSink);
-        return streamEnv.execute();
+        Table firstNameUpperTable = tableEnv.sqlQuery("""
+                SELECT UPPER(firstName), UPPER(lastName)
+                FROM KafkaInput
+                """);
+
+        firstNameUpperTable.insertInto("KafkaOutput").execute();
+        firstNameUpperTable.insertInto("PrintOutput").execute();
+
+        return null;
     }
 }
