@@ -131,7 +131,7 @@ class JobTest {
 
                            LOGGER.info("receivedRecords: {}", receivedRecords);
 
-                           assertThat(receivedRecords).allSatisfy(record -> {
+                           assertThat(receivedRecords).isNotEmpty().allSatisfy(record -> {
                                LOGGER.info("Record: {}", record);
 
                                JSONAssert.assertEquals(expectedJson, record.value(), JSONCompareMode.STRICT);
@@ -199,7 +199,7 @@ class JobTest {
 
                            LOGGER.info("receivedRecords: {}", receivedRecords);
 
-                           assertThat(receivedRecords).allSatisfy(record -> {
+                           assertThat(receivedRecords).isNotEmpty().allSatisfy(record -> {
                                LOGGER.info("Record: {}", record);
 
                                JSONAssert.assertEquals(expectedJson, record.value(), JSONCompareMode.STRICT);
