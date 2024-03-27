@@ -53,7 +53,7 @@ class JobTest {
     static MiniClusterExtension miniClusterExtension = new MiniClusterExtension(
             new MiniClusterResourceConfiguration.Builder()
                     .setNumberTaskManagers(1)
-                    .setNumberSlotsPerTaskManager(30)
+                    .setNumberSlotsPerTaskManager(4)
                     .build()
     );
 
