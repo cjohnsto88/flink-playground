@@ -54,7 +54,7 @@ public class Job {
                 """);
 
         firstNameUpperTable.insertInto("KafkaOutput").execute();
-        firstNameUpperTable.insertInto("PrintOutput").execute();
+//        firstNameUpperTable.insertInto("PrintOutput").execute();
 
         return null;
     }
