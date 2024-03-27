@@ -1,0 +1,4 @@
+root = true
+
+[*.java]
+trim_trailing_whitespace = true
