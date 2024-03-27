@@ -103,11 +103,6 @@ class JobTest {
             producer.send(new ProducerRecord<>(INPUT_TOPIC, "{\"key\": \"ONE\"}", json));
         }
 
-        jobSubmitter.submit(() -> {
-            Job job = new Job();
-
-            return job.execute(kafka.getBootstrapServers());
-        });
 
         Map<String, Object> consumerProperties = KafkaTestUtils.consumerProps(kafka.getBootstrapServers(), "test-group", "true");
 
@@ -122,6 +117,12 @@ class JobTest {
         List<ConsumerRecord<String, String>> receivedRecords = new ArrayList<>();
         try (Consumer<String, String> consumer = new KafkaConsumer<>(consumerProperties, new StringDeserializer(), new StringDeserializer())) {
             consumer.subscribe(List.of(OUTPUT_TOPIC));
+
+            jobSubmitter.submit(() -> {
+                Job job = new Job();
+
+                return job.execute(kafka.getBootstrapServers());
+            });
 
             await().atMost(Duration.ofSeconds(20L))
                    .untilAsserted(() -> {
@@ -171,11 +172,6 @@ class JobTest {
             producer.send(new ProducerRecord<>(INPUT_TOPIC, "{\"key\": \"ONE\"}", json));
         }
 
-        jobSubmitter.submit(() -> {
-            Job job = new Job();
-
-            return job.execute(kafka.getBootstrapServers());
-        });
 
         Map<String, Object> consumerProperties = KafkaTestUtils.consumerProps(kafka.getBootstrapServers(), "test-group", "true");
 
@@ -190,6 +186,12 @@ class JobTest {
         List<ConsumerRecord<String, String>> receivedRecords = new ArrayList<>();
         try (Consumer<String, String> consumer = new KafkaConsumer<>(consumerProperties, new StringDeserializer(), new StringDeserializer())) {
             consumer.subscribe(List.of(OUTPUT_TOPIC));
+
+            jobSubmitter.submit(() -> {
+                Job job = new Job();
+
+                return job.execute(kafka.getBootstrapServers());
+            });
 
             await().atMost(Duration.ofSeconds(20L))
                    .untilAsserted(() -> {
