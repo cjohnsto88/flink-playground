@@ -129,6 +129,8 @@ class JobTest {
                            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer);
                            records.forEach(receivedRecords::add);
 
+                           LOGGER.info("receivedRecords: {}", receivedRecords);
+
                            assertThat(receivedRecords).allSatisfy(record -> {
                                LOGGER.info("Record: {}", record);
 
