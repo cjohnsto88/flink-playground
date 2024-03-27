@@ -43,7 +43,8 @@ public class Job {
                   `firstName` VARCHAR,
                   `lastName` VARCHAR
                 ) WITH (
-                  'connector' = 'print'
+                  'connector' = 'print',
+                  'print-identifier' = 'To-Upper: '
                 )
                 """);
 
