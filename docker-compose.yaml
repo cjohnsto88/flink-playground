@@ -55,6 +55,13 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml
+  alertmanager:
+      image: prom/alertmanager:latest
+      container_name: alertmanager
+      ports:
+        - "9093:9093"
+      volumes:
+        - ./alertmanager:/etc/alertmanager
   grafana:
     image: grafana/grafana
     container_name: grafana
